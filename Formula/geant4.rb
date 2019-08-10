@@ -12,13 +12,14 @@ class Geant4 < Formula
     sha256 "c3e542d8f1ff4561437e31b8aae44fe00e922d613bfaaa56611e7392f897c22c" => :sierra
   end
 
-  option "with-gdml", "Use GDML"
-  option "with-multithreaded", "Build with multithreading support"
-  option "without-multithreaded", "Build without multithreading support"
+  option "with-gdml", "Build Geant with GDML support"
+  option "with-multithreaded", "Build Geant with multithreading support"
   option "with-usolids", "Use USolids (experimental)"
-  option "with-qt", "Use QT"
+  option "with-qt", "Build Geant with QT visualization support"
   option "without-examples", "Do not build Geant4 examples"
   option "with-system-clhep", "Use system CLHEP"
+  option "with-opengl-x11", "Build the X11 OpenGL visualization driver"
+  option "with-raytracer-x11", "Build RayTracer visualization driver with X11 support"
 
   depends_on "cmake" => [:build, :test]
   depends_on "qt" => :optional
@@ -81,29 +82,16 @@ class Geant4 < Formula
 
   def install
     mkdir "geant-build" do
-      args = std_cmake_args + %w[
-        ../
-        -DGEANT4_USE_GDML=ON
-        -DGEANT4_BUILD_MULTITHREADED=ON
-        -DGEANT4_USE_QT=ON
-      ]
-
-      system "cmake", *args
-      system "make", "install"
-    end
-
-  def install
-    mkdir "geant-build" do
     args = %w[
       ../
-      -DGEANT4_USE_OPENGL_X11=ON
-      -DGEANT4_USE_RAYTRACER_X11=ON
-      -DGEANT4_USE_XM=OFF
     ]
+    args << "-DGEANT4_USE_OPENGL_X11=ON" if build.with? "opengl-x11"
+    args << "-DGEANT4_USE_RAYTRACER_X11=ON" if build.with? "raytracer-x11"
+    args << "-DGEANT4_USE_XM=OFF"
     args << "-DGEANT4_INSTALL_DATA=ON"
     args << "-DGEANT4_BUILD_EXAMPLE=OFF" if build.without? "example"
     args << "-DGEANT4_USE_QT=ON" if build.with? "qt"
-    args << "-DQT_QMAKE_EXECUTABLE=/usr/local/opt/qt/bin/qmake" if OS.mac? and build.with? "qt"
+    #args << "-DQT_QMAKE_EXECUTABLE=/usr/local/opt/qt/bin/qmake" if OS.mac? and build.with? "qt"
     args << "-DGEANT4_USE_G3TOG4=ON" if build.with? "g3tog4"
     args << "-DGEANT4_USE_GDML=ON" if build.with? "gdml"
     args << "-DGEANT4_USE_USOLIDS=ON" if build.with? "usolids"
@@ -114,7 +102,6 @@ class Geant4 < Formula
     system "cmake", *args
     system "make", "-j16", "install"
   end
-end
 
     resources.each do |r|
       (share/"Geant4-#{version}/data/#{r.name}#{r.version}").install r
@@ -125,6 +112,8 @@ end
     Because Geant4 expects a set of environment variables for
     datafiles, you should source:
       . #{HOMEBREW_PREFIX}/bin/geant4.sh (or .csh)
+    If using zsh use this variant:
+      pushd /usr/local/bin >/dev/null; . ./geant4.sh; popd >/dev/null
     before running an application built with Geant4.
   EOS
   end
