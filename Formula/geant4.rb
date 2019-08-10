@@ -1,9 +1,9 @@
 class Geant4 < Formula
   desc "Simulation toolkit for particle transport through matter"
   homepage "https://geant4.web.cern.ch"
-  url "https://geant4-data.web.cern.ch/geant4-data/releases/source/geant4.10.05.tar.gz"
-  version "10.5.0"
-  sha256 "4b05b4f7d50945459f8dbe287333b9efb772bd23d50920630d5454ec570b782d"
+  url "http://geant4-data.web.cern.ch/geant4-data/releases/source/geant4.10.05.p01.tar.gz"
+  version "10.5.1"
+  sha256 "f4a292220500fad17e0167ce3153e96e3410ecbe96284e572dc707f63523bdff"
 
   bottle do
     cellar :any
@@ -12,9 +12,17 @@ class Geant4 < Formula
     sha256 "c3e542d8f1ff4561437e31b8aae44fe00e922d613bfaaa56611e7392f897c22c" => :sierra
   end
 
+  option "with-gdml", "Use GDML"
+  option "with-multithreaded", "Build with multithreading support"
+  option "without-multithreaded", "Build without multithreading support"
+  option "with-usolids", "Use USolids (experimental)"
+  option "with-qt", "Use QT"
+  option "without-examples", "Do not build Geant4 examples"
+  option "with-system-clhep", "Use system CLHEP"
+
   depends_on "cmake" => [:build, :test]
-  depends_on "qt"
-  depends_on "xerces-c"
+  depends_on "qt" => :optional
+  depends_on "xerces-c" if build.with? "gdml"
 
   resource "G4NDL" do
     url "https://cern.ch/geant4-data/datasets/G4NDL.4.5.tar.gz"
@@ -83,6 +91,30 @@ class Geant4 < Formula
       system "cmake", *args
       system "make", "install"
     end
+
+  def install
+    mkdir "geant-build" do
+    args = %w[
+      ../
+      -DGEANT4_USE_OPENGL_X11=ON
+      -DGEANT4_USE_RAYTRACER_X11=ON
+      -DGEANT4_USE_XM=OFF
+    ]
+    args << "-DGEANT4_INSTALL_DATA=ON"
+    args << "-DGEANT4_BUILD_EXAMPLE=OFF" if build.without? "example"
+    args << "-DGEANT4_USE_QT=ON" if build.with? "qt"
+    args << "-DQT_QMAKE_EXECUTABLE=/usr/local/opt/qt/bin/qmake" if OS.mac? and build.with? "qt"
+    args << "-DGEANT4_USE_G3TOG4=ON" if build.with? "g3tog4"
+    args << "-DGEANT4_USE_GDML=ON" if build.with? "gdml"
+    args << "-DGEANT4_USE_USOLIDS=ON" if build.with? "usolids"
+    args << "-DGEANT4_BUILD_MULTITHREADED=ON" if build.with? "multithreaded"
+    args << "-DGEANT4_BUILD_MULTITHREADED=OFF" if build.without? "multithreaded"
+    args << "-DGEANT4_USE_SYSTEM_CLHEP=ON" if build.with? "system-clhep"
+    args.concat(std_cmake_args)
+    system "cmake", *args
+    system "make", "-j16", "install"
+  end
+end
 
     resources.each do |r|
       (share/"Geant4-#{version}/data/#{r.name}#{r.version}").install r
